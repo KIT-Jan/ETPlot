@@ -2,22 +2,46 @@ IV:
   x : voltage
   y : current
 
-IT:
-  x : time
-  y : current
-
 IV_guardcurrent:
   x : voltage
   y : guardcurrent
+
+IT:
+  x : time
+  y : current
 
 CV:
   x : voltage
   y : 1/C**2
 
-I_GCD:
+CV_MOS:
   x : voltage
+  y : capacitance
+
+I_GCD:
+  x : lv
   y : current
 
 I_leak:
-  x : strip_number
+  x : strip
   y : current
+
+R_poly:
+  x : strip
+  y : r_poly
+
+CC:
+  x : strip
+  y : capacitance
+
+Pinhole:
+  x : strip
+  y : current
+
+R_int:
+  x : strip
+  y : r_int
+
+C_int:
+  x : strip
+  y : capacitance
