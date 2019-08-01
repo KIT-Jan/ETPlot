@@ -3,11 +3,18 @@
 import requests
 import numpy as np
 import sys
+import yaml
 
 
 class DataOperator():
 
     def __init__(self):
+        with open("cfg/measurements.yml", 'r') as stream:
+            try:
+                measurement_definitions = yaml.safe_load(stream)
+                print(measurement_definitions)
+            except yaml.YAMLError as exc:
+                print(exc)
         print("initialised")
 
     def get_data(self, probe_id, data_conversion, save_data, **kwargs):
