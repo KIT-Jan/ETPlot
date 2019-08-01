@@ -1,7 +1,6 @@
 """Get the data from database"""
 
 import requests
-import numpy as np
 import sys
 import yaml
 
@@ -19,69 +18,62 @@ class DataOperator():
     def get_data(self, probe_id, measurement_type, save_data, **kwargs):
         """ Request the data and save it (or not) """
 
-        if measurement_type == "CV":
-            return self.handle_CV_measurement(probe_id, save_data)
         if measurement_type == "R_int_ramp":
             print("R_int_ramp to be implemented!")
             return False
 
-        x_para = self.measurement_definitions[measurement_type]["x"]
-        y_para = self.measurement_definitions[measurement_type]["y"]
+        parameters = self.measurement_definitions[measurement_type]
+        if "1/C**2" in parameters:
+            parameters.remove("1/C**2")
+            parameters.append("capacitance")
 
         request = requests.get(f"http://192.168.13.33:8000/"
                                f"measurement/{probe_id}/json")
         answer = request.json()
         sensor_name = answer["header"]["sensorname"]
         data = answer["data"]
-        data_dict = {x_para: [], y_para: []}
+
+        # data_dict = {"first_parameter": [], "second_parameter: [], ... "}
+        data_dict = {parameters[i]: [] for i in range(len(parameters))}
+
+        try:
+            for entry in data:
+                for parameter in parameters:
+                    data_dict[parameter].append(entry[parameter]["value"])
+        except:
+            print("Measurement parameters:", *parameters)
+            print("Measurement parameters and keys in database are different!")
+            raise
+
+        if measurement_type == "CV":
+            capacitance_data = data_dict["capacitance"]
+            converted_data = []
+            for item in capacitance_data:
+                converted_data.append(float(1/item**2))
+            data_dict["1/C**2"] = converted_data
+            del data_dict["capacitance"]
 
         if save_data:
             with open(f"data/{sensor_name}_{probe_id}_"
                       f"{measurement_type}.txt",
                       "w") as file:
 
-                for entry in data:
-                    x_value = entry[x_para]["value"]
-                    y_value = entry[y_para]["value"]
-                    data_dict[x_para].append(x_value)
-                    data_dict[y_para].append(y_value)
-                    file.write(f"{x_value}\t{y_value}\n")
+                value_list = []
+                for key in data_dict.keys():
+                    value_list.append(data_dict[key])
 
-        if not save_data:
-            for entry in data:
-                data_dict[x_para].append(entry[x_para]["value"])
-                data_dict[y_para].append(entry[y_para]["value"])
+                for i in range(len(value_list[0])):
+                    string = ""
+                    for item in range(len(parameters)):
+                        if item == 0:
+                            string += str(value_list[item][i])
+                        else:
+                            string += "\t" + str(value_list[item][i])
+                    string[-2:]
+                    string += "\n"
+                    file.write(string)
 
-        return data_dict
-
-    def handle_CV_measurement(self, probe_id, save_data):
-        """ Standard CV measurements are calculated by 1/C**2"""
-
-        request = requests.get(f"http://192.168.13.33:8000/"
-                               f"measurement/{probe_id}/json")
-        answer = request.json()
-        sensor_name = answer["header"]["sensorname"]
-        data = answer["data"]
-        data_dict = {"voltage": [], "1/C**2": []}
-
-        if save_data:
-            with open(f"data/{sensor_name}_{probe_id}_CV.txt",
-                      "w") as file:
-
-                for entry in data:
-                    x_value = entry["voltage"]["value"]
-                    y_value = 1/float(entry["capacitance"]["value"])**2
-                    data_dict["voltage"].append(x_value)
-                    data_dict["1/C**2"].append(y_value)
-                    file.write(f"{x_value}\t{y_value}\n")
-
-        if not save_data:
-            for entry in data:
-                x_value = entry["voltage"]["value"]
-                data_dict["voltage"].append(x_value)
-                y_value = 1/float(entry["capacitance"]["value"])**2
-                data_dict["1/C**2"].append(y_value)
-
+        data_dict["sensorname"] = sensor_name
         return data_dict
 
 
